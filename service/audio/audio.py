@@ -30,6 +30,7 @@ import config as ConfigService
 from faster_whisper import WhisperModel
 from iso639 import languages
 import pandas as pd
+import storage as StorageService
 import utils as Utils
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part
@@ -264,6 +265,7 @@ def _transcribe_gemini(
   transcription_dataframe = pd.DataFrame()
   video_language = ConfigService.DEFAULT_VIDEO_LANGUAGE
   language_probability = 0.0
+  subtitles_content = None
 
   vertexai.init(
       project=ConfigService.GCP_PROJECT_ID,
@@ -314,15 +316,7 @@ def _transcribe_gemini(
               duration_s=lambda df: df['end_s'] - df['start_s'],
           )
       )
-      subtitles_output_path = re.sub(
-        r'\.[^.]+$', f'.{ConfigService.OUTPUT_SUBTITLES_TYPE}', audio_file_path
-      )
-      with open(subtitles_output_path, 'w', encoding='utf8') as f:
-        f.write(result.group(4))
-      logging.info(
-          'TRANSCRIPTION - transcript for %s written successfully!',
-          audio_file_path,
-      )
+      subtitles_content = result.group(4)
     else:
       logging.warning(
           'Could not transcribe audio! Returning empty transcription...'
@@ -335,6 +329,19 @@ def _transcribe_gemini(
         'Returning empty transcription...'
     )
 
+  subtitles_output_path = audio_file_path.replace(
+      '.wav', f'.{ConfigService.OUTPUT_SUBTITLES_TYPE}'
+  )
+  with open(subtitles_output_path, 'w', encoding='utf8') as f:
+    if subtitles_content:
+      f.write(subtitles_content)
+    else:
+      pass
+
+  logging.info(
+      'TRANSCRIPTION - transcript for %s written successfully!',
+      audio_file_path,
+  )
   return transcription_dataframe, video_language, float(language_probability)
 
 
@@ -343,8 +350,24 @@ def _transcribe_whisper(
     audio_file_path: str,
 ) -> Tuple[pd.DataFrame, str, float]:
   """Transcribes audio using Whisper."""
+  model_download_dir_base = (
+      f'/tmp/{ConfigService.CONFIG_TRANSCRIPTION_MODEL_WHISPER_GCS_BUCKET}'
+  )
+  model_download_dir = str(
+      pathlib.Path(
+          model_download_dir_base,
+          ConfigService.CONFIG_TRANSCRIPTION_MODEL_WHISPER,
+      )
+  )
+  os.makedirs(model_download_dir, exist_ok=True)
+  count_files = StorageService.download_gcs_dir(
+      bucket_name=ConfigService.CONFIG_TRANSCRIPTION_MODEL_WHISPER_GCS_BUCKET,
+      dir_path=ConfigService.CONFIG_TRANSCRIPTION_MODEL_WHISPER,
+      output_dir=model_download_dir,
+  )
   model = WhisperModel(
-      ConfigService.CONFIG_TRANSCRIPTION_MODEL_WHISPER,
+      model_download_dir
+      if count_files else ConfigService.CONFIG_TRANSCRIPTION_MODEL_WHISPER,
       device=ConfigService.DEVICE,
       compute_type='int8',
   )
