@@ -67,20 +67,31 @@ limitations under the License.
         class="file-chooser"
         (file)="onFileSelected($event)"
       ></file-chooser>
-      <mat-checkbox
-        matTooltip="Uncheck for videos where there is no voice-over"
+      <div
+        class="upload-checkbox-wrapper"
         style="
-          justify-content: center;
+          width: 100%;
           display: flex;
-          margin-top: 4px;
-          margin-right: 15px;
+          flex-direction: column;
+          align-items: center;
         "
-        color="primary"
-        [(ngModel)]="analyseAudio"
-        [disabled]="!selectedFile || loading"
       >
-        Analyse voice-over
-      </mat-checkbox>
+        <mat-checkbox
+          matTooltip="Uncheck for videos where there is no voice-over"
+          matTooltipPosition="right"
+          style="
+            justify-content: center;
+            display: flex;
+            margin-top: 4px;
+            margin-right: 15px;
+          "
+          color="primary"
+          [(ngModel)]="analyseAudio"
+          [disabled]="!selectedFile || loading"
+        >
+          Analyse voice-over
+        </mat-checkbox>
+      </div>
       <button
         type="button"
         mat-raised-button
@@ -316,7 +327,6 @@ limitations under the License.
           <video
             class="mat-elevation-z8"
             #previewVideoElem
-            autoplay
             controls
             disablePictureInPicture
           >
@@ -425,7 +435,7 @@ limitations under the License.
               showTickMarks
               [max]="math.round(previewVideoElem.duration)"
               [min]="step"
-              [step]="step"
+              step="1"
               [disabled]="loading"
             >
               <input matSliderThumb [(ngModel)]="duration" #durationSlider />
