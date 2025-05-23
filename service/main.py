@@ -24,6 +24,7 @@ import logging
 from typing import Any, Dict
 
 import combiner as CombinerService
+import video_qa as VideoQAService
 import config as ConfigService
 import extractor as ExtractorService
 import functions_framework
@@ -109,5 +110,10 @@ def gcs_file_uploaded(cloud_event: Dict[str, Any]):
         gcs_bucket_name=bucket, render_file=trigger_file
     )
     combiner_instance.finalise_render()
+  video_qa_instance = VideoQAService.VideoQA(
+        gcs_bucket_name=bucket, render_file=trigger_file
+  )
+  video_qa_instance.get_video_feedback()
+  logging.info('TRIGGER - video feedback trigger finalise')
 
   logging.info('END - Finished processing uploaded file: %s.', filepath)
